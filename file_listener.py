@@ -11,7 +11,10 @@ from rx import Observable
 def main(directory):
     files = os.scandir(directory)
     return Observable.from_(files)\
-            .map(lambda f: {'name': f.name, 'size': f.stat().st_size})\
+            .map(lambda f: {
+                    'name': f.name,
+                    'size': f.stat().st_size
+                })\
             .to_list()\
             .finally_action(lambda: files.close())
 
@@ -26,7 +29,9 @@ def _diff(acc, curr):
 
     changed_files = [*map(dict, acc.difference(curr_temp))]
     file_names = [*map(itemgetter('name'), changed_files)]
+
     print("File(s) changed: ", *file_names, sep='\n', end='\n')
+
     return curr
 
 
