@@ -1,8 +1,6 @@
 import asyncio
 import os
 from functools import partial
-from collections import Counter
-from itertools import chain
 from operator import itemgetter
 
 from rx import Observable
