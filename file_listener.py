@@ -1,5 +1,7 @@
+#! /usr/bin/env python
 import asyncio
 import os
+import sys
 from functools import partial
 from operator import itemgetter
 
@@ -7,14 +9,17 @@ from rx import Observable
 
 
 def main(directory):
-    files = os.scandir(directory)
-    return Observable.from_(files)\
-            .map(lambda f: {
-                    'name': f.name,
-                    'size': f.stat().st_size
+    non_hidden_files  = Observable.from_(os.fwalk('./'))\
+            .filter(lambda el: not el[0].startswith('./.'))\
+
+
+    return non_hidden_files.flat_map(lambda val: Observable.from_(val[2])\
+            .map(lambda el: os.path.join(val[0], el)))\
+            .map(lambda el: {
+                'name': el,
+                'size': os.stat(el).st_size
                 })\
             .to_list()\
-            .finally_action(lambda: files.close())
 
 
 def _stop(loop):
@@ -28,7 +33,9 @@ def _diff(acc, curr):
     changed_files = [*map(dict, acc.difference(curr_temp))]
     file_names = [*map(itemgetter('name'), changed_files)]
 
-    print("File(s) changed: ", *file_names, sep='\n', end='\n')
+    if file_names:
+        os.system('pytest')
+        print("File(s) changed: ", *file_names, sep='\n', end='\n')
 
     return curr
 
@@ -38,8 +45,10 @@ if __name__ == '__main__':
 
     print("Listening...")
 
-    sub = Observable.interval(1000)\
-            .flat_map(lambda el: main('./'))\
+    rate = int(sys.argv[1])
+
+    sub = Observable.interval(rate)\
+            .flat_map(lambda el: main('.'))\
             .distinct_until_changed()\
             .scan(_diff)\
             .subscribe(on_completed=lambda: _stop(loop))
