@@ -4,6 +4,7 @@ import os
 import sys
 from functools import partial
 from operator import itemgetter
+import argparse
 
 from rx import Observable
 
@@ -43,14 +44,36 @@ def _diff(command, acc, curr):
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
 
-    print("Listening...")
+    parser = argparse.ArgumentParser()
+    required = parser.add_argument_group("required arguments")
 
-    rate = int(sys.argv[1])
+    required.add_argument(
+        "--rate",
+        metavar="N ms",
+        type=int,
+        required=True,
+        help="The ms refreshing rate",
+    )
+
+    required.add_argument(
+        "--command",
+        metavar="CMD",
+        type=str,
+        required=True,
+        help="The that will run after any file change in file tree",
+    )
+
+    params = vars(parser.parse_args())
+
+    rate = params.get("rate")
+    command = params.get("command")
+
+    print("Listening...")
 
     sub = Observable.interval(rate)\
             .flat_map(lambda el: main('.'))\
             .distinct_until_changed()\
-            .scan(partial(_diff, sys.argv[2]))\
+            .scan(partial(_diff, command))\
             .subscribe(on_completed=lambda: _stop(loop))
 
     loop.run_forever()
