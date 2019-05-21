@@ -9,7 +9,7 @@ from rx import Observable
 
 
 def main(directory):
-    non_hidden_files  = Observable.from_(os.fwalk('./'))\
+    non_hidden_files  = Observable.from_(os.fwalk(directory))\
             .filter(lambda el: not el[0].startswith('./.'))\
 
 
@@ -26,7 +26,7 @@ def _stop(loop):
     loop.call_soon_threadsafe(loop.stop)
 
 
-def _diff(acc, curr):
+def _diff(command, acc, curr):
     acc = set(map(lambda el: tuple(el.items()), acc)) 
     curr_temp = set(map(lambda el: tuple(el.items()), curr))
 
@@ -34,7 +34,7 @@ def _diff(acc, curr):
     file_names = [*map(itemgetter('name'), changed_files)]
 
     if file_names:
-        os.system('pytest')
+        os.system(command)
         print("File(s) changed: ", *file_names, sep='\n', end='\n')
 
     return curr
@@ -50,7 +50,7 @@ if __name__ == '__main__':
     sub = Observable.interval(rate)\
             .flat_map(lambda el: main('.'))\
             .distinct_until_changed()\
-            .scan(_diff)\
+            .scan(partial(_diff, sys.argv[2]))\
             .subscribe(on_completed=lambda: _stop(loop))
 
     loop.run_forever()
